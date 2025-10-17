@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { supabase } from "../integrations/supabase/client.js";
-import { submitOnboarding } from "./submitOnboarding.js";
+import submitOnboarding from "../../api/submitOnboarding";
 
 async function runTest() {
   // 1️⃣ Log in first (replace with an actual test user)
