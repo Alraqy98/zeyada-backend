@@ -1,4 +1,4 @@
-import { supabase } from "../integrations/supabase/client.js";
+import { supabase } from "../integrations/supabase/client";
 
 export interface OnboardingFormData {
   businessName: string;
@@ -23,51 +23,15 @@ export interface OnboardingResult {
 
 export async function submitOnboarding(formData: OnboardingFormData): Promise<OnboardingResult> {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    // Insert into 'onboarding' table directly using service role key
+    const { error } = await supabase.from("onboarding").insert([formData]);
 
-    if (!user) {
-      return {
-        success: false,
-        error: "Please log in to continue",
-        requiresAuth: true,
-      };
+    if (error) {
+      console.error("Supabase insert error:", error);
+      throw new Error(error.message);
     }
 
-    // ✅ Save profile info
-const { error: profileError } = await supabase
-  .from("profiles")
-  .upsert({
-    user_id: user.id,
-    business_name: formData.businessName,
-    website: formData.website,
-    country: formData.country,
-    timezone: "UTC",
-    hours: formData.hours,
-    working_days: formData.workingDays,
-    hours_json: {
-      hours: formData.hours,
-      workingDays: formData.workingDays,
-    },
-  });
-
-if (profileError) throw profileError;
-
-// ✅ Save AI profile info
-const { error: onboardingError } = await supabase
-  .from("ai_profiles")
-  .upsert({
-    user_id: user.id,
-    description: formData.description,
-    detected_language: formData.languages,
-    industry: formData.businessActivity,
-    channels_json: { channels: formData.channels },
-    suggestions_json: null,
-  });
-
-    if (onboardingError) throw onboardingError;
-
     return { success: true };
-
   } catch (error) {
     console.error("Onboarding error:", error);
     return {
