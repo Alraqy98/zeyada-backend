@@ -1,8 +1,11 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 require("dotenv/config");
 const client_js_1 = require("../integrations/supabase/client.js");
-const submitOnboarding_js_1 = require("./submitOnboarding.js");
+const submitOnboarding_1 = __importDefault(require("../../api/submitOnboarding"));
 async function runTest() {
     var _a;
     // 1️⃣ Log in first (replace with an actual test user)
@@ -30,7 +33,7 @@ async function runTest() {
         painPoint: "Manual customer handling",
         automationGoal: "Automate lead response",
     };
-    const result = await (0, submitOnboarding_js_1.submitOnboarding)(formData);
+    const result = await (0, submitOnboarding_1.default)(formData);
     console.log("Result:", result);
 }
 runTest();

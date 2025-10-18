@@ -1,55 +1,58 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.submitOnboarding = submitOnboarding;
-const client_js_1 = require("../integrations/supabase/client.js");
-async function submitOnboarding(formData) {
+const express_1 = __importDefault(require("express"));
+const supabase_js_1 = require("@supabase/supabase-js");
+const router = express_1.default.Router();
+const supabase = (0, supabase_js_1.createClient)(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY // use service role key for admin ops
+);
+router.post("/", async (req, res) => {
     try {
-        const { data: { user } } = await client_js_1.supabase.auth.getUser();
-        if (!user) {
-            return {
-                success: false,
-                error: "Please log in to continue",
-                requiresAuth: true,
-            };
+        const authHeader = req.headers.authorization;
+        if (!authHeader) {
+            return res.status(401).json({ success: false, error: "Missing Authorization header" });
         }
-        // ✅ Save profile info
-        const { error: profileError } = await client_js_1.supabase
-            .from("profiles")
-            .upsert({
-            user_id: user.id,
-            business_name: formData.businessName,
-            website: formData.website,
-            country: formData.country,
-            timezone: "UTC",
-            hours: formData.hours,
-            working_days: formData.workingDays,
-            hours_json: {
-                hours: formData.hours,
-                workingDays: formData.workingDays,
+        const token = authHeader.split(" ")[1];
+        const { data: userData, error: userError } = await supabase.auth.getUser(token);
+        if (userError || !userData?.user) {
+            console.error("Token verification failed:", userError);
+            return res.status(401).json({ success: false, error: "Invalid or expired token" });
+        }
+        const user = userData.user;
+        console.log("Authenticated user:", user.email);
+        const { data, error } = await supabase
+            .from("onboarding")
+            .insert([
+            {
+                user_id: user.id,
+                business_name: req.body.businessName,
+                website: req.body.website,
+                country: req.body.country,
+                city: req.body.city,
+                languages: req.body.languages,
+                channels: req.body.channels,
+                working_days: req.body.workingDays,
+                hours: req.body.hours,
+                business_activity: req.body.businessActivity,
+                description: req.body.description,
+                pain_point: req.body.painPoint,
+                automation_goal: req.body.automationGoal,
             },
-        });
-        if (profileError)
-            throw profileError;
-        // ✅ Save AI profile info
-        const { error: onboardingError } = await client_js_1.supabase
-            .from("ai_profiles")
-            .upsert({
-            user_id: user.id,
-            description: formData.description,
-            detected_language: formData.languages,
-            industry: formData.businessActivity,
-            channels_json: { channels: formData.channels },
-            suggestions_json: null,
-        });
-        if (onboardingError)
-            throw onboardingError;
-        return { success: true };
+        ]);
+        if (error) {
+            console.error("Supabase insert error:", error);
+            throw error;
+        }
+        return res.json({ success: true });
     }
-    catch (error) {
-        console.error("Onboarding error:", error);
-        return {
+    catch (err) {
+        console.error("Onboarding route crashed:", err);
+        return res.status(500).json({
             success: false,
-            error: error instanceof Error ? error.message : "Unexpected error during onboarding",
-        };
+            error: err instanceof Error ? err.message : "Unexpected error",
+        });
     }
-}
+});
+exports.default = router;
