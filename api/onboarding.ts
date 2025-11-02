@@ -34,7 +34,7 @@ router.post("/", async (req, res) => {
     const business_id = generateZeyId();
 
     // Insert new business record
-    const { error: insertError } = await supabase.from("businesses").insert([
+    const { error: insertError } = await supabase.from("onboarding").insert([
       {
         business_id,
         business_name,
