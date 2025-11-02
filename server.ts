@@ -1,6 +1,5 @@
 import dotenv from "dotenv";
-dotenv.config(); // ✅ forces .env to load
-import "dotenv/config";
+dotenv.config(); // ✅ Load .env first
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
@@ -8,6 +7,7 @@ import bodyParser from "body-parser";
 import authRoutes from "./api/auth";
 import submitOnboarding from "./api/submitOnboarding";
 import onboardingRoutes from "./api/onboarding";
+import automationWebhook from "./api/automationWebhook"; // ✅ keep import here, after app declaration lines
 
 // 🧠 Environment check for Render logs
 console.log("🔍 Render ENV CHECK:", {
@@ -33,7 +33,7 @@ function toGMT3(date: string | Date | null): string | null {
   return gmt3.toISOString().replace("T", " ").substring(0, 19);
 }
 
-// 🌍 Global middleware to convert any date fields in JSON responses to GMT+3
+// 🌍 Global middleware to adjust any ISO date strings to GMT+3
 app.use((req: Request, res: Response, next: NextFunction) => {
   const oldJson = res.json.bind(res);
 
@@ -61,7 +61,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 // 🧾 Request logger
-app.use((req, res, next) => {
+app.use((req, _res, next) => {
   console.log(`➡️  ${req.method} ${req.url}`);
   next();
 });
@@ -70,9 +70,10 @@ app.use((req, res, next) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/submitOnboarding", submitOnboarding);
 app.use("/api/onboarding", onboardingRoutes);
+app.use("/api/automation/webhook", automationWebhook); // ✅ now correctly placed
 
 // 🟢 Root endpoint
-app.get("/", (req: Request, res: Response) => {
+app.get("/", (_req: Request, res: Response) => {
   res.send("✅ Zeyada backend is live!");
 });
 
