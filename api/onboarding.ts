@@ -21,6 +21,15 @@ function generateZeyId() {
   return `ZEY-${random}`;
 }
 
+// 🕒 Helper to convert UTC timestamps to GMT+3
+function toGMT3(date: string | Date | null): string | null {
+  if (!date) return null;
+  const d = new Date(date);
+  // Convert to milliseconds +3 hours
+  const gmt3 = new Date(d.getTime() + 3 * 60 * 60 * 1000);
+  return gmt3.toISOString().replace("T", " ").substring(0, 19);
+}
+
 // ✅ POST /api/onboarding
 router.post("/", async (req, res) => {
   try {
@@ -88,7 +97,12 @@ router.post("/", async (req, res) => {
     // await sendWhatsAppMessage(whatsapp, `👋 Welcome to Zeyada! Your ID is ${business_id}.`);
 
     console.log(`✅ New onboarding: ${business_name} (${business_id})`);
-    res.json({ success: true, business_id });
+    res.json({
+  success: true,
+  business_id,
+  renewal_date: toGMT3(new Date()),
+  message: "Onboarding data saved with GMT+3 timezone",
+});
 
   } catch (err: any) {
     console.error("❌ Onboarding error:", err.message);
