@@ -80,30 +80,42 @@ router.post("/", async (req: Request, res: Response) => {
       },
     ]);
 
-    // 📧 Send welcome email
-    try {
-      const signupDate = toGMT3(new Date());
+    // 📧 Send welcome email (with Start Setup button)
+try {
+  const signupDate = toGMT3(new Date());
 
-      await resend.emails.send({
-        from: "Zeyada <noreply@zeyada.app>",
-        to: email,
-        subject: "Welcome to Zeyada 🚀 — Your Business ID",
-        html: `
+  console.log("📧 Sending welcome email to:", email);
+
+  if (!res.headersSent) {
+    await resend.emails.send({
+      from: "Zeyada <noreply@zeyada.app>",
+      to: email,
+      subject: "Welcome to Zeyada 🚀 — Your Business ID",
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111;">
           <h2>Welcome to Zeyada!</h2>
-          <p>Hi ${business_name},</p>
+          <p>Hi <strong>${business_name}</strong>,</p>
           <p>We’re excited to have you onboard. Here are your details:</p>
           <ul>
             <li><strong>Business ID:</strong> ${business_id}</li>
             <li><strong>Plan:</strong> ${plan || "Starter"}</li>
             <li><strong>Signup Date (GMT+3):</strong> ${signupDate}</li>
           </ul>
+          <p>
+            <a href="https://wa.me/${whatsapp.replace('+', '')}?text=Hello%20Zeyada!%20I%20just%20signed%20up%20with%20ID%20${business_id}" 
+               style="background:#6366F1;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;display:inline-block;margin-top:12px;">
+               Start Setup on WhatsApp 💬
+            </a>
+          </p>
           <p>You can now message us anytime on WhatsApp using this ID to set up your automations.</p>
           <p><em>– The Zeyada Team</em></p>
-        `,
-      });
-    } catch (emailErr: any) {
-      console.error("📭 Email failed:", emailErr.message);
-    }
+        </div>
+      `,
+    });
+  }
+} catch (emailErr: any) {
+  console.error("📭 Email failed:", emailErr.message);
+}
 
     console.log(`✅ New onboarding: ${business_name} (${business_id})`);
 
