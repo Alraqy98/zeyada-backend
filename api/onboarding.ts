@@ -35,7 +35,8 @@ function toGMT3(date: string | Date | null): string | null {
 
 // ✅ POST /api/onboarding
 router.post("/", async (req: Request, res: Response) => {
-  try {
+  console.log("📩 Incoming onboarding submission:", req.body);
+    try {
     const { business_name, industry, email, whatsapp, country, plan } = req.body;
 
     // 🔍 Validate required fields
