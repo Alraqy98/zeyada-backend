@@ -21,10 +21,14 @@ function generateZeyId(): string {
   return `ZEY-${random}`;
 }
 
-// 🕒 Helper to convert UTC timestamps to GMT+3 (Asia/Riyadh)
+// 🕒 Helper to safely convert UTC to GMT+3
 function toGMT3(date: string | Date | null): string | null {
   if (!date) return null;
   const d = new Date(date);
+  if (isNaN(d.getTime())) {
+    console.error("⚠️ Invalid date passed to toGMT3():", date);
+    return null;
+  }
   const gmt3 = new Date(d.getTime() + 3 * 60 * 60 * 1000);
   return gmt3.toISOString().replace("T", " ").substring(0, 19);
 }
@@ -44,8 +48,9 @@ router.post("/", async (req: Request, res: Response) => {
     // 🆔 Generate unique business ID
     const business_id = generateZeyId();
 
-    // 📅 Calculate renewal date (30 days from now, stored in UTC)
-    const renewalDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    // 📅 Calculate renewal date safely
+    const renewalDate = new Date();
+    renewalDate.setDate(renewalDate.getDate() + 30);
 
     // 💾 Insert new record
     const { error: insertError } = await supabase.from("onboarding").insert([
@@ -58,7 +63,7 @@ router.post("/", async (req: Request, res: Response) => {
         country,
         plan: plan || "Starter",
         status: "trial",
-        renewal_date: renewalDate,
+        renewal_date: renewalDate.toISOString(), // ✅ always valid
       },
     ]);
 
@@ -106,7 +111,7 @@ router.post("/", async (req: Request, res: Response) => {
       success: true,
       business_id,
       renewal_date: toGMT3(renewalDate),
-      message: "Onboarding data saved with GMT+3 timezone",
+      message: "Onboarding data saved successfully (GMT+3 applied)",
     });
   } catch (err: any) {
     console.error("❌ Onboarding error:", err.message);
