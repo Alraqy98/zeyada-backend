@@ -1,7 +1,7 @@
-import express from "express";
+import express, { Request, Response } from "express";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
-import * as Resend from "resend";
+import { Resend } from "resend";
 
 dotenv.config();
 const router = express.Router();
@@ -13,36 +13,41 @@ const supabase = createClient(
 );
 
 // ✅ Initialize Resend (for email)
-const resend = new Resend.Resend(process.env.RESEND_API_KEY || "");
+const resend = new Resend(process.env.RESEND_API_KEY || "");
 
-// ✅ Helper function to generate unique Zeyada IDs
-function generateZeyId() {
+// ✅ Helper to generate unique Zeyada IDs
+function generateZeyId(): string {
   const random = Math.random().toString(36).substring(2, 7).toUpperCase();
   return `ZEY-${random}`;
 }
 
-// 🕒 Helper to convert UTC timestamps to GMT+3
+// 🕒 Helper to convert UTC timestamps to GMT+3 (Asia/Riyadh)
 function toGMT3(date: string | Date | null): string | null {
   if (!date) return null;
   const d = new Date(date);
-  // Convert to milliseconds +3 hours
   const gmt3 = new Date(d.getTime() + 3 * 60 * 60 * 1000);
   return gmt3.toISOString().replace("T", " ").substring(0, 19);
 }
 
 // ✅ POST /api/onboarding
-router.post("/", async (req, res) => {
+router.post("/", async (req: Request, res: Response) => {
   try {
     const { business_name, industry, email, whatsapp, country, plan } = req.body;
 
+    // 🔍 Validate required fields
     if (!business_name || !email || !whatsapp) {
-      return res.status(400).json({ success: false, error: "Missing required fields." });
+      return res
+        .status(400)
+        .json({ success: false, error: "Missing required fields." });
     }
 
-    // Generate unique business ID
+    // 🆔 Generate unique business ID
     const business_id = generateZeyId();
 
-    // Insert new business record
+    // 📅 Calculate renewal date (30 days from now, stored in UTC)
+    const renewalDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+    // 💾 Insert new record
     const { error: insertError } = await supabase.from("onboarding").insert([
       {
         business_id,
@@ -53,13 +58,13 @@ router.post("/", async (req, res) => {
         country,
         plan: plan || "Starter",
         status: "trial",
-        renewal_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days trial
+        renewal_date: renewalDate,
       },
     ]);
 
     if (insertError) throw insertError;
 
-    // Log event
+    // 🧾 Log signup event
     await supabase.from("activity_log").insert([
       {
         business_id,
@@ -69,8 +74,10 @@ router.post("/", async (req, res) => {
       },
     ]);
 
-    // ✅ Send welcome email via Resend
+    // 📧 Send welcome email
     try {
+      const signupDate = toGMT3(new Date());
+
       await resend.emails.send({
         from: "Zeyada <noreply@zeyada.app>",
         to: email,
@@ -82,28 +89,25 @@ router.post("/", async (req, res) => {
           <ul>
             <li><strong>Business ID:</strong> ${business_id}</li>
             <li><strong>Plan:</strong> ${plan || "Starter"}</li>
+            <li><strong>Signup Date (GMT+3):</strong> ${signupDate}</li>
           </ul>
           <p>You can now message us anytime on WhatsApp using this ID to set up your automations.</p>
           <p><em>– The Zeyada Team</em></p>
         `,
       });
     } catch (emailErr: any) {
-      console.error("Email failed:", emailErr.message);
+      console.error("📭 Email failed:", emailErr.message);
     }
 
-    // ✅ (Optional) Send WhatsApp welcome message
-    // You can integrate Twilio, 360Dialog, or Meta Graph API here
-    // Example:
-    // await sendWhatsAppMessage(whatsapp, `👋 Welcome to Zeyada! Your ID is ${business_id}.`);
-
     console.log(`✅ New onboarding: ${business_name} (${business_id})`);
-    res.json({
-  success: true,
-  business_id,
-  renewal_date: toGMT3(new Date()),
-  message: "Onboarding data saved with GMT+3 timezone",
-});
 
+    // ✅ Respond success
+    res.json({
+      success: true,
+      business_id,
+      renewal_date: toGMT3(renewalDate),
+      message: "Onboarding data saved with GMT+3 timezone",
+    });
   } catch (err: any) {
     console.error("❌ Onboarding error:", err.message);
     res.status(500).json({ success: false, error: err.message });
