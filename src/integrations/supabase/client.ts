@@ -1,18 +1,16 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config(); // ✅ ensures .env loads even before server.ts
+
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-if (!supabaseUrl || !supabaseServiceRoleKey) {
+// ✅ Validate environment variables
+if (!process.env.YOUR_SUPABASE_URL || !process.env.YOUR_SUPABASE_SERVICE_KEY) {
+  console.error("❌ Missing Supabase environment variables in .env");
   throw new Error("Missing Supabase environment variables");
 }
 
-// Use service role key for server-side operations
-export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-});
+// ✅ Export your main Supabase client
+export const supabase = createClient(
+  process.env.YOUR_SUPABASE_URL!,
+  process.env.YOUR_SUPABASE_SERVICE_KEY!
+);

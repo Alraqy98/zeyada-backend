@@ -4,14 +4,27 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const client_js_1 = require("../src/integrations/supabase/client.js"); // keep relative to your folder
+const dotenv_1 = __importDefault(require("dotenv"));
+dotenv_1.default.config(); // ✅ Load .env before Supabase
+const supabase_js_1 = require("@supabase/supabase-js");
 const router = express_1.default.Router();
-// 🔹 Health-check
+// ✅ Validate env variables
+if (!process.env.LOVABLE_SUPABASE_URL || !process.env.LOVABLE_SUPABASE_ANON_KEY) {
+    console.error("❌ Missing Lovable Supabase credentials in .env");
+    throw new Error("Missing LOVABLE_SUPABASE_URL or LOVABLE_SUPABASE_ANON_KEY");
+}
+if (!process.env.YOUR_SUPABASE_URL || !process.env.YOUR_SUPABASE_SERVICE_KEY) {
+    console.error("❌ Missing your Supabase credentials in .env");
+    throw new Error("Missing YOUR_SUPABASE_URL or YOUR_SUPABASE_SERVICE_KEY");
+}
+// ✅ Initialize Supabase clients
+const lovableSupabase = (0, supabase_js_1.createClient)(process.env.LOVABLE_SUPABASE_URL, process.env.LOVABLE_SUPABASE_ANON_KEY);
+const yourSupabase = (0, supabase_js_1.createClient)(process.env.YOUR_SUPABASE_URL, process.env.YOUR_SUPABASE_SERVICE_KEY);
+// ✅ Health check route
 router.get("/ping", (req, res) => {
-    console.log("✅ Ping received");
-    res.json({ message: "Onboarding route is alive!" });
+    res.json({ message: "Submit Onboarding route is alive!" });
 });
-// 🔹 Main onboarding route
+// ✅ Main onboarding route
 router.post("/", async (req, res) => {
     console.log("📩 [Onboarding] Endpoint hit.");
     try {
@@ -21,15 +34,15 @@ router.post("/", async (req, res) => {
             return res.status(401).json({ success: false, error: "Missing Authorization header" });
         }
         const token = authHeader.split(" ")[1];
-        const { data: userData, error: authError } = await client_js_1.supabase.auth.getUser(token);
+        const { data: userData, error: authError } = await lovableSupabase.auth.getUser(token);
         if (authError || !userData?.user) {
             console.log("❌ Invalid token:", authError?.message);
             return res.status(401).json({ success: false, error: "Invalid or expired token" });
         }
-        console.log("✅ Authenticated user:", userData.user.email);
+        console.log("✅ Authenticated Lovable user:", userData.user.email);
         const formData = req.body;
         console.log("🧠 Received data:", formData);
-        const { error: insertError } = await client_js_1.supabase
+        const { error: insertError } = await yourSupabase
             .from("onboarding")
             .insert([{ user_id: userData.user.id, ...formData }]);
         if (insertError) {
@@ -47,4 +60,5 @@ router.post("/", async (req, res) => {
         });
     }
 });
+// ✅ Default export (required by server.ts)
 exports.default = router;
