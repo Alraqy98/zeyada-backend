@@ -25,10 +25,18 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// 🕒 Helper to convert UTC timestamps to GMT+3
-function toGMT3(date: string | Date | null): string | null {
+// 🕒 Helper to safely convert UTC timestamps to GMT+3
+function toGMT3(date: string | Date | null | undefined): string | null {
   if (!date) return null;
+
   const d = new Date(date);
+
+  // Handle invalid or weird date strings
+  if (isNaN(d.getTime())) {
+    console.warn("⚠️ Skipping invalid date:", date);
+    return null;
+  }
+
   const gmt3 = new Date(d.getTime() + 3 * 60 * 60 * 1000);
   return gmt3.toISOString().replace("T", " ").substring(0, 19);
 }
