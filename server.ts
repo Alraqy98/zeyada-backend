@@ -4,10 +4,12 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
 
+// 🧩 Import routes
 import authRoutes from "./api/auth";
 import submitOnboarding from "./api/submitOnboarding";
 import onboardingRoutes from "./api/onboarding";
-import automationWebhook from "./api/automationWebhook"; // ✅ keep import here, after app declaration lines
+import automationWebhook from "./api/automationWebhook";
+import reportRoutes from "./api/report"; // ✅ make sure this file exists
 
 // 🧠 Environment check for Render logs
 console.log("🔍 Render ENV CHECK:", {
@@ -30,8 +32,6 @@ function toGMT3(date: string | Date | null | undefined): string | null {
   if (!date) return null;
 
   const d = new Date(date);
-
-  // Handle invalid or weird date strings
   if (isNaN(d.getTime())) {
     console.warn("⚠️ Skipping invalid date:", date);
     return null;
@@ -78,7 +78,8 @@ app.use((req, _res, next) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/submitOnboarding", submitOnboarding);
 app.use("/api/onboarding", onboardingRoutes);
-app.use("/api/automation/webhook", automationWebhook); // ✅ now correctly placed
+app.use("/api/automation/webhook", automationWebhook);
+app.use("/api/report", reportRoutes); // ✅ add this line to register the new report endpoint
 
 // 🟢 Root endpoint
 app.get("/", (_req: Request, res: Response) => {
